@@ -1,5 +1,5 @@
 defmodule LinkedList do
-    def run do
-        list = [a | [b | [c | [d | [e]]]]]
-    end
+  def run do
+    # list = [a | [b | [c | [d | [e]]]]]
+  end
 end
