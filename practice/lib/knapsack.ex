@@ -18,15 +18,15 @@ defmodule Knapsack do
       {:camera, 1, 6}
     ]
 
-    list = Enum.map(list, fn item ->
+    list =
+      Enum.map(list, fn item ->
         Tuple.append(item, List.duplicate({0, []}, @cols_count))
-    end)
+      end)
   end
 
   def iterate_list(list, f, coords \\ {0, 0})
 
   def iterate_list(list, f, {i, j} = coords) when @cols_count > j do
-    # IO.inspect(coords)
     last_j_in_a_row = j == @cols_count - 1
 
     new_list = f.(list, coords)
@@ -36,7 +36,7 @@ defmodule Knapsack do
         do: {i + 1, 0},
         else: {i, j + 1}
 
-    if (last_j_in_a_row && i == length(list) - 1) do
+    if last_j_in_a_row && i == length(list) - 1 do
       new_list
     else
       iterate_list(new_list, f, next_coords)
