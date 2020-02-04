@@ -1,30 +1,55 @@
 defmodule BFS do
-  # def run do
-  #     graph = %{}
-  #     graph["you"] = ["alice", "bob", "claire"] 
-  #     graph["bob"] = ["anuj", "peggy"] 
-  #     graph["alice"] = ["peggy"] 
-  #     graph["claire"] = ["thom", "jonny"] 
-  #     graph["anuj"] = []
-  #     graph["peggy"] = []
-  #     graph["thom"] = []
-  #     graph["jonny"] = []
+  #       10
+  #     6    15
+  #   3  8     20
+  #  2 4      
 
-  #     graph
-  #     |> Map.to_list
-  #     |> Enum.each(fn {key, val} -> 
-  #         shortest_to_anuj(graph, [val])
-  #     end)
-  # end
+  def run do
+    tree = {
+      10,
+      {
+        6,
+        {
+          3,
+          { 2, nil, nil },
+          { 4, nil, nil },
+        },
+        { 8, nil, nil }
+      },
+      {
+        15,
+        nil,
+        { 20, nil, nil }
+      }
+    }
 
-  # defp shortest_to_anuj(graph, history) do
-  #     graph
-  #     |> Enum.each(fn {k, v} -> 
-  #         if (v == "anuj") do
-  #             IO.inspect(history)
-  #         end
+    IO.inspect("bfs: #{inspect bfs(tree)}")
+    IO.inspect("dfs: #{inspect dfs(tree)}")
+  end
 
-  #         shortest_to_anuj(v, history ++ [v])
-  #     end)
-  # end
+  def bfs(nil), do: []
+  def bfs([]), do: []
+  def bfs(nodes) when is_list(nodes) do
+    values = nodes
+    |> Enum.map(fn({v, l, r}) -> v end)
+
+    children = nodes
+    |> Enum.flat_map(fn({v, l, r}) -> 
+      Enum.filter([l, r], &(&1 != nil))
+    end)
+
+    values ++ bfs(children)
+  end
+  def bfs(tree) do
+    {v, l, r} = tree
+
+    [v] ++ bfs([l, r])
+  end
+
+  def dfs(nil), do: []
+  def dfs(tree) do
+    {v, l, r} = tree
+    
+    [v] ++ dfs(l) ++ dfs(r)
+  end
 end

@@ -1,19 +1,19 @@
 defmodule LongestSubstring do
   def substring() do
     matrix("fish", "fosh")
-    |> iterate(&substring_step/2)
+    |> iterate(&substring_cell/2)
   end
 
   def subsequence() do
     {_, _, sum1} =
       matrix("fosh", "fish")
-      |> iterate(&subsequence_step/2)
+      |> iterate(&subsequence_cell/2)
       |> List.last()
       |> List.last()
 
     {_, _, sum2} =
       matrix("fosh", "fort")
-      |> iterate(&subsequence_step/2)
+      |> iterate(&subsequence_cell/2)
       |> List.last()
       |> List.last()
 
@@ -33,7 +33,7 @@ defmodule LongestSubstring do
     |> Enum.chunk_every(length(s1_list))
   end
 
-  defp subsequence_step(matrix, {i, j} = coords) do
+  defp subsequence_cell(matrix, {i, j} = coords) do
     value = {cur_l, cur_r, _} = value_at(matrix, coords)
 
     prev_sum = sum_at(matrix, {i - 1, j - 1})
@@ -48,7 +48,7 @@ defmodule LongestSubstring do
     update_at(matrix, coords, sum)
   end
 
-  defp substring_step(matrix, {i, j} = coords) do
+  defp substring_cell(matrix, {i, j} = coords) do
     value = {cur_l, cur_r, _} = value_at(matrix, coords)
     prev_sum = sum_at(matrix, {i - 1, j - 1})
 
