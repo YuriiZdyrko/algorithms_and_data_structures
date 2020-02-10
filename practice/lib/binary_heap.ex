@@ -1,11 +1,18 @@
 defmodule MaxBinaryHeap do
     @moduledoc """
-    In max binary heap values are always larger than values on deeper level.
+    Time complexity:
+    - log(n) for insertion and removal
+    - n for search
+
+    In max binary heap parent is always larger than children.
 
     def parent_index(n), do: floor((n - 1)/2)
     
     def children_indexes(0), do: {1, 2}
     def children_indexes(n), do: {(2 * n) + 1, (2 * n) + 2}
+
+    Priority Queue - a special case of Binary Heap, where each Node
+    has {Priority, Value}, and Priority is used for comparison.
     """
     
     #         41
@@ -23,6 +30,8 @@ defmodule MaxBinaryHeap do
     end
 
     @doc """
+    Method name for priority queue: dequeue(heap)
+
     - put last [num] in front
     - recursively swap [num] with largest child if child > [num]
     """
@@ -57,6 +66,8 @@ defmodule MaxBinaryHeap do
     end
 
     @doc """
+    Method signature for priority queue: enqueue(heap, value, priority)
+
     - put new [num] in the end
     - recursively swap [num] with parent if parent < [num]
     """

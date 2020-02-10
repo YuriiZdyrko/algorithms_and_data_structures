@@ -28,7 +28,7 @@ defmodule BFS do
     IO.inspect("dfs_post_order: #{inspect dfs_postorder(tree)}")
     IO.inspect("dfs_pre_order: #{inspect dfs_preorder(tree)}")
     IO.inspect("dfs_insert: #{inspect insert(tree, 22)}")
-    IO.inspect("dfs_delete: #{inspect delete(tree, 6)}")
+    # IO.inspect("dfs_delete: #{inspect delete(tree, 6)}")
   end
 
   def bfs(nil), do: []
@@ -83,17 +83,17 @@ defmodule BFS do
     end
   end
 
-  def delete(nil, value), do: nil
-  def delete(tree, value) do
-    {v, l, r} = tree
+  # def delete(nil, value), do: nil
+  # def delete(tree, value) do
+  #   {v, l, r} = tree
     
-    if (value == v) do
-      {l_v, l_l, l_r} = l
-      {ll_v, ll_l, ll_r} = l_l
+  #   if (value == v) do
+  #     {l_v, l_l, l_r} = l
+  #     {ll_v, ll_l, ll_r} = l_l
       
-      {l_v, {ll_v, ll_l, ll_r}, l_r}
-    else
-      {v, delete(l, value), delete(r, value)}
-    end
-  end
+  #     {l_v, {ll_v, ll_l, ll_r}, l_r}
+  #   else
+  #     {v, delete(l, value), delete(r, value)}
+  #   end
+  # end
 end
