@@ -54,6 +54,16 @@ defmodule Graphs do
         Map.put_new(adj_list, vertex, [])
     end
 
+    def add_vertexes(adj_list, vertexes) do
+        vertexes
+        |> Enum.reduce(adj_list, fn v, acc -> add_vertex(acc, v) end)
+    end
+
+    def add_edges(adj_list, edges) do
+        edges
+        |> Enum.reduce(adj_list, fn {e1, e2}, acc -> add_edge(acc, e1, e2) end)
+    end
+
     def add_edge(adj_list, v1, v2) do
         adj_list
         |> update_in([v1], &([v2 | &1]))
