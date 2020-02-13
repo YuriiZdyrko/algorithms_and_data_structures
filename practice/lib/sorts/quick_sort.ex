@@ -14,13 +14,6 @@ defmodule QuickSort do
   def loop([a, b] = arr, _, _, _) when a > b, do: [b, a]
 
   def loop(arr, pvt, i, j) when j < length(arr) do
-    # IO.inspect(arr)
-    # IO.inspect(pvt)
-    # IO.inspect(i)
-    # IO.inspect(j)
-    # IO.inspect("\n")
-    # Process.sleep(200)
-
     at_j = Enum.at(arr, j)
 
     cond do

@@ -1,6 +1,8 @@
 defmodule Sorts.Insertion do
   @moduledoc """
   List iterated, and left part is always sorted.
+  Insertion sort is good for nearly-sorted (this case) or completely-reversed list.
+
   Tail-recursion for ordering left part
   """
 
