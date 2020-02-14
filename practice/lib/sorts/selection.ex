@@ -9,16 +9,18 @@ defmodule Sorts.Selection do
   end
 
   def sort([]), do: []
+
   def sort([h | t] = list) do
     {min, rest} = min_and_rest(t, h)
     [min | sort(rest)]
   end
-  
+
   def min_and_rest(list, min, rest \\ [])
   def min_and_rest([], min, rest), do: {min, rest}
+
   def min_and_rest([h | t] = list, min, rest) do
     if h < min,
-        do: min_and_rest(t, h, [min | rest]),
-        else: min_and_rest(t, min, [h | rest])
+      do: min_and_rest(t, h, [min | rest]),
+      else: min_and_rest(t, min, [h | rest])
   end
 end
