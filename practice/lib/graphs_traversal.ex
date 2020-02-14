@@ -46,10 +46,10 @@ defmodule GraphsTraversal do
   end
 
   def test_dfs() do
-    # {:ok, agent_pid} = Agent.start(fn -> MapSet.new() end)
+    {:ok, agent_pid} = Agent.start(fn -> MapSet.new() end)
 
-    # graph()
-    # |> dfs(:a, agent_pid)
+    graph()
+    |> dfs(:a, agent_pid)
   end
 
   @doc """
@@ -77,16 +77,20 @@ defmodule GraphsTraversal do
   @doc """
   DFS helps find if path exists
   """
-  # def dfs(graph, agent_pid) do
-  #     visited = Agent.get(&(&1))
-  #     if (vertex in visited) do
-  #         IO.inspect visited
-  #     else
-  #         Agent.update(agent_pid, &(MapSet.put(&1, vertex)))
+  def dfs(graph, vertex, agent_pid) do
+    visited = Agent.get(agent_pid, & &1)
 
-  #         graph[vertex]
-  #         |> Enum.sort()
-  #         |> Enum.each(fn v -> dfs(graph, agent_pid) end)
-  #     end
-  # end
+    if vertex in visited do
+      # No backtracking here (vertex already visited by deeper call)
+      IO.inspect("ignore #{vertex}")
+    else
+      IO.inspect("visit #{vertex}")
+      Agent.update(agent_pid, &MapSet.put(&1, vertex))
+
+      graph[vertex]
+      |> Enum.filter(&(not (&1 in visited)))
+      |> Enum.sort()
+      |> Enum.each(&dfs(graph, &1, agent_pid))
+    end
+  end
 end
