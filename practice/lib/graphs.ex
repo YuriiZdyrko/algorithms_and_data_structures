@@ -31,9 +31,17 @@ defmodule Graphs do
           B: ["D", "E"],
           C: ["A", "K"]
       ]
+
+
+      Weighted graph representation:
+      [
+          A: [%{node: "B", weight: 10}, %{node: "C", weight: 1},],
+          B: [%{node: "A", weight: 10}, %{node: "D", weight: 100}]
+          ...
+      ]
   """
 
-  # Undirected graph, stored ad adjacency list
+  # Undirected unweighted graph, stored ad adjacency list
   def test do
     new()
     |> add_vertex(:a)

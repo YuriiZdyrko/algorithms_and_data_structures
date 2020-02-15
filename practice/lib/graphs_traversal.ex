@@ -65,9 +65,7 @@ defmodule GraphsTraversal do
       vertexes
       |> Enum.flat_map(&graph[&1])
       |> Enum.uniq()
-      |> Enum.reject(fn vertex ->
-        vertex in visited
-      end)
+      |> Enum.reject(&(&1 in visited))
 
     IO.inspect("visiting #{inspect(vertexes)}")
 
