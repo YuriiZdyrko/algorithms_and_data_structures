@@ -22,12 +22,6 @@ defmodule Dijkstra.PriorityQueue do
     {h, t}
   end
 
-  # def dequeue(p_queue, n) do
-  #   p_queue
-  #   |> Enum.reject(&(&1.node == n))
-  #   |> sort
-  # end
-
   defp sort(p_queue) do
     p_queue |> Enum.sort_by(fn %{dist: d} -> d end)
   end

@@ -1,8 +1,6 @@
 defmodule Dijkstra do
   alias Dijkstra.{WeightedGraph, PriorityQueue}
 
-  import IEx
-
   @moduledoc """
         A   
      1/   \2
@@ -13,9 +11,7 @@ defmodule Dijkstra do
      D  -  E
      6\  1/ \9
          
-        F  3-  G 
-
-  A to F shortest = A->B->D->E->F
+        F  3-  G
   """
 
   def init_graph do
@@ -44,14 +40,13 @@ defmodule Dijkstra do
   }
   """
   def init_min_distances(graph) do
-    Enum.map(
-      graph,
-      fn {node, _edges} ->
-        {node, {:infinity, nil}}
+    graph
+    |> Enum.reduce(
+      %{},
+      fn {node, _edges}, acc ->
+        put_in(acc, [node], {:infinity, nil})
       end
     )
-    |> Enum.into(%{})
-    |> put_in([:a], {0, nil})
   end
 
   def run(initial_node \\ :a) do
@@ -59,28 +54,26 @@ defmodule Dijkstra do
     min_distances = init_min_distances(graph)
 
     pq =
-      PriorityQueue.new()
-      |> PriorityQueue.enqueue(%{dist: 0, name: initial_node, prev: nil})
+      PriorityQueue.enqueue(
+        PriorityQueue.new(),
+        %{dist: 0, name: initial_node, prev: nil}
+      )
 
     loop(graph, pq, min_distances)
-    |> backtrack()
   end
 
-  def loop(graph, [] = pq, min_distances, visited), do: min_distances
+  def loop(_graph, [] = _pq, min_distances, _visited), do: min_distances
 
   def loop(graph, priority_queue, min_distances, visited \\ []) do
     {curr, pq} = PriorityQueue.dequeue(priority_queue)
 
     min_distances =
-      if curr.dist < elem(min_distances[curr.name], 0) do
-        put_in(min_distances, [curr.name], {curr.dist, curr.prev})
-      else
-        min_distances
-      end
+      if curr.dist < elem(min_distances[curr.name], 0),
+        do: put_in(min_distances, [curr.name], {curr.dist, curr.prev}),
+        else: min_distances
 
-    priority_queue =
-      graph
-      |> Map.get(curr.name)
+    pq =
+      graph[curr.name]
       |> Enum.filter(&(&1.name not in visited))
       |> Enum.reduce(pq, fn child, pq ->
         PriorityQueue.enqueue(pq, %{
@@ -90,18 +83,6 @@ defmodule Dijkstra do
         })
       end)
 
-    # IO.inspect(min_distances)
-    # Process.sleep 100
-
-    loop(graph, priority_queue, min_distances, [curr.name | visited])
-  end
-
-  def backtrack(min_distances) do
-    min_distances
-    |> Enum.map(fn {k, {dist, from}} ->
-      from
-    end)
-    |> Enum.uniq()
-    |> tl
+    loop(graph, pq, min_distances, [curr.name | visited])
   end
 end

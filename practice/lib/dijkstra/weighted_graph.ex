@@ -1,6 +1,8 @@
 defmodule Dijkstra.WeightedGraph do
   @moduledoc """
-      Weighted graph representation:
+      A Min Weighted graph, with order by weight
+      
+      Representation:
       [
           A: [%{node: "B", weight: 10}, %{node: "C", weight: 1},],
           B: [%{node: "A", weight: 10}, %{node: "D", weight: 100}]
