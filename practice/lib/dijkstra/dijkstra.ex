@@ -51,15 +51,15 @@ defmodule Dijkstra do
 
   def run(initial_node \\ :a) do
     graph = init_graph()
-    min_distances = init_min_distances(graph)
-
-    pq =
+    
+    loop(
+      graph, 
       PriorityQueue.enqueue(
         PriorityQueue.new(),
         %{dist: 0, name: initial_node, prev: nil}
-      )
-
-    loop(graph, pq, min_distances)
+      ),
+      init_min_distances(graph)
+    )
   end
 
   def loop(_graph, [] = _pq, min_distances, _visited), do: min_distances
