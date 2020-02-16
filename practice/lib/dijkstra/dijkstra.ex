@@ -51,9 +51,9 @@ defmodule Dijkstra do
 
   def run(initial_node \\ :a) do
     graph = init_graph()
-    
+
     loop(
-      graph, 
+      graph,
       PriorityQueue.enqueue(
         PriorityQueue.new(),
         %{dist: 0, name: initial_node, prev: nil}

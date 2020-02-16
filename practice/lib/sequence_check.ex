@@ -38,8 +38,7 @@ defmodule SequenceCheck do
   def check(string, start) do
     start_str = Integer.to_string(start)
 
-    with true <- String.starts_with?(string, start_str) do
+    String.starts_with?(string, start_str) && 
       check(String.trim_leading(string, start_str), start + 1)
-    end
   end
 end

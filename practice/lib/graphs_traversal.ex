@@ -3,6 +3,7 @@ defmodule GraphsTraversal do
   Options for traversal:
   - Bread-first (move in all possible directions)
   - Depth-first (move away from root, then backtrack & repeat)
+  - Priority-first (for example Dijkstra algorithm)
   """
 
   import Graphs
@@ -52,6 +53,13 @@ defmodule GraphsTraversal do
     |> dfs(:a, agent_pid)
   end
 
+  def test_dfs_simple() do
+    # {:ok, agent_pid} = Agent.start(fn -> MapSet.new() end)
+
+    graph()
+    |> dfs_simple(:a)
+  end
+
   @doc """
   BFS helps find shortest path
   """
@@ -73,7 +81,7 @@ defmodule GraphsTraversal do
   end
 
   @doc """
-  DFS helps find if path exists
+  DFS - very "smart" approach. But I'll leave it here for historic reference.
   """
   def dfs(graph, vertex, agent_pid) do
     visited = Agent.get(agent_pid, & &1)
@@ -89,6 +97,28 @@ defmodule GraphsTraversal do
       |> Enum.filter(&(not (&1 in visited)))
       |> Enum.sort()
       |> Enum.each(&dfs(graph, &1, agent_pid))
+    end
+  end
+
+  @doc """
+  DFS - look mummy, no Agent!
+  """
+  def dfs_simple(graph, vertex) do
+    dfs_simple(graph, vertex, [], [vertex])
+  end
+
+  def dfs_simple(graph, vertex, visited, stack) do
+    if vertex in visited do
+      IO.inspect("ignore #{vertex}")
+    else
+      IO.inspect("visit #{vertex}")
+
+      [h | rest_of_stack] =
+        graph[vertex]
+        |> Enum.reject(&(&1 in visited))
+        |> Kernel.++(stack)
+
+      dfs_simple(graph, h, [vertex | visited], rest_of_stack)
     end
   end
 end
