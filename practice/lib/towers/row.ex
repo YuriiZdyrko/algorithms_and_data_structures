@@ -15,6 +15,18 @@ defmodule Towers.Row do
     }
   end
 
+  def digest(%Row{cells: cells} = row) do
+    discovered_values =
+      cells
+      |> Enum.filter(& &1.value)
+      |> Enum.map(& &1.value)
+      |> Enum.into(MapSet.new())
+
+    %Row{
+      cells: Enum.map(cells, &Cell.assign_value(&1, discovered_values))
+    }
+  end
+
   @doc """
     Set initial values[] set for each cell in a row,
     using clues (n_front and n_back).

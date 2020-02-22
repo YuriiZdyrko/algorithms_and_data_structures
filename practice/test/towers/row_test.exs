@@ -62,7 +62,7 @@ defmodule Towers.RowTest do
            } = Row.digest_clues(row)
   end
 
-  test "given only n_front, digest/2 sets values correctly" do
+  test "given only n_front, digest_clues/2 sets values correctly" do
     row = %Row{
       n_front: 1,
       n_back: nil,
@@ -85,5 +85,54 @@ defmodule Towers.RowTest do
                %Cell{values: ^cell_values}
              ]
            } = Row.digest_clues(row)
+  end
+
+  test "digest/1 updates cells:
+    - removes discovered values from Cell.values sets
+    - if Cell.values contains single item, set Cell.value" do
+    row = %Row{
+      cells: [
+        %Cell{
+          value: nil,
+          values: MapSet.new([1, 2, 3])
+        },
+        %Cell{
+          value: 1,
+          values: MapSet.new()
+        },
+        %Cell{
+          value: nil,
+          values: MapSet.new([4])
+        },
+        %Cell{
+          value: nil,
+          values: MapSet.new([2, 3])
+        }
+      ]
+    }
+
+    values_2_3 = MapSet.new([2, 3])
+    values_empty = MapSet.new()
+
+    assert %Row{
+             cells: [
+               %Cell{
+                 value: nil,
+                 values: ^values_2_3
+               },
+               %Cell{
+                 value: 1,
+                 values: ^values_empty
+               },
+               %Cell{
+                 value: 4,
+                 values: ^values_empty
+               },
+               %Cell{
+                 value: nil,
+                 values: ^values_2_3
+               }
+             ]
+           } = Row.digest(row)
   end
 end
