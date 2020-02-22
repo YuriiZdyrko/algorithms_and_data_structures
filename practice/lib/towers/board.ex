@@ -15,10 +15,9 @@ defmodule Towers.Board do
       end
       |> Enum.chunk_every(4)
 
-    %Board{
+    board = %Board{
       cells: cells
-    }
-
+    } 
     # generate rows, for each row
     # digest clues
     # merge
@@ -27,8 +26,58 @@ defmodule Towers.Board do
     #   merge
   end
 
+  def run do
+    board = new()
+
+    board = board
+    |> split_rows
+    |> Enum.map(&Row.digest_clues/1)
+    |> Enum.reduce(board, &Board.merge_row(&2, &1))
+
+    try do
+      loop(board)
+    catch e -> 
+      IO.inspect("OK, running again")
+      run()
+    end
+    # rows = board
+    # |> split_rows()
+    # |> Enum.map(&Row.digest/1)
+
+    # board = rows
+    # |> Enum.reduce(board, fn row, board -> 
+    #   Board.merge_row(board, row)
+    # end)
+  end
+  
+  def loop(board) do
+    board_new = board
+    |> split_rows
+    |> Enum.map(&Row.digest/1)
+    |> Enum.reduce(board, &Board.merge_row(&2, &1))
+    
+    # Random shooting
+    if (equal?(board, board_new)) do
+      # cells = board_new.cells |> List.flatten()
+      new_cells = board_new.cells
+      |> Enum.map(&random_shot/1)
+      # |> List.flatten()
+
+      # IO.inspect(new_cells)
+      
+      Process.sleep(1000)
+      IEx.pry()
+      
+      loop(%Board{board_new | cells: new_cells})
+    else
+      IEx.pry()
+      # IO.inspect(board)
+      loop(board_new)
+    end
+  end
+
   def cells_discovered_count(%Board{cells: cells}) do
-    Enum.count(cells, &Cell.discovered?(&1))
+    Enum.count(List.flatten(cells), &Cell.discovered?(&1))
   end
 
   def split_rows(board) do
@@ -91,5 +140,28 @@ defmodule Towers.Board do
     board.cells
     |> Enum.at(y)
     |> Enum.at(x)
+  end
+
+  # TODO: make random shot work nicely
+  # Fucking random shot should be developed...
+  def random_shot(cells, cells_shot \\ 0)
+  def random_shot([], _), do: []
+  def random_shot([h | t] = cells, cells_shot) do
+    if MapSet.size(h.values) == 2 && cells_shot < 1 do
+      IO.inspect("Alright, making a guess")
+      [%Cell{
+        h | 
+        value: Enum.at(h.values, :rand.uniform(MapSet.size(h.values) - 1))
+      } | random_shot(t, cells_shot + 1)]
+    else
+      [h | random_shot(t, cells_shot)]
+    end
+  end
+
+  def equal?(board1, board2) do
+    l1 = List.flatten(board1.cells) |> Enum.map(fn c -> {c.value, c.values} end)
+    l2 = List.flatten(board2.cells) |> Enum.map(fn c -> {c.value, c.values} end)
+
+    l1 == l2
   end
 end

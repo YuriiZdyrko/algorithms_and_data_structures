@@ -20,12 +20,22 @@ defmodule Towers.Row do
       cells
       |> Enum.filter(& &1.value)
       |> Enum.map(& &1.value)
+
+    if (has_duplicates?(discovered_values)) do
+      throw "Duplicates, try again"
+      Process.sleep(2000)
+    end
+      
+    discovered_values_set = 
+      discovered_values
       |> Enum.into(MapSet.new())
 
     %Row{
-      cells: Enum.map(cells, &Cell.assign_value(&1, discovered_values))
+      cells: Enum.map(cells, &Cell.assign_value(&1, discovered_values_set))
     }
   end
+
+  def has_duplicates?(list), do: Enum.uniq(list) != list
 
   @doc """
     Set initial values[] set for each cell in a row,
