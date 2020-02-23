@@ -10,9 +10,7 @@ defmodule Towers.Cell do
     %Cell{x: x, y: y}
   end
 
-  def assign_value(%Cell{value: _value, values: values} = cell, discovered_values) do
-    values = MapSet.difference(values, discovered_values)
-
+  def apply_values(%Cell{value: nil, values: values} = cell) do
     if MapSet.size(values) == 1 do
       %Cell{
         cell
@@ -20,10 +18,47 @@ defmodule Towers.Cell do
           value: Enum.at(values, 0)
       }
     else
+      cell
+    end
+  end
+
+  def apply_values(%Cell{value: val} = cell) do
+    cell
+  end
+
+  def apply_singles(%Cell{values: values} = cell, set) do
+    if MapSet.size(values) > 1 do
+      values = MapSet.difference(values, set)
+
       %Cell{
         cell
         | values: values
       }
+    else
+      cell
+    end
+  end
+
+  def apply_discovered(%Cell{values: values} = cell, set) do
+    values = MapSet.difference(values, set)
+
+    %Cell{
+      cell
+      | values: values
+    }
+  end
+
+  def apply_uniques(cell, set) do
+    matching_unique = MapSet.intersection(cell.values, set)
+
+    if MapSet.size(matching_unique) == 1 do
+      %Cell{
+        cell
+        | value: Enum.at(matching_unique, 0),
+          values: MapSet.new()
+      }
+    else
+      cell
     end
   end
 

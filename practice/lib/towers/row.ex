@@ -1,12 +1,19 @@
 defmodule Towers.Row do
   alias __MODULE__
 
+  import IEx
+
   alias Towers.{Cell}
 
   @board_size 4
 
   defstruct [:n_front, :n_back, cells: []]
 
+  # TODO: Refactor rows, to be persistent. Transient Rows has been dumb idea.
+  # Inside Row store coords of cells, n_front, n_back.
+  # Board will have hor_rows Row[], and ver_rows Row[]
+  # Every time some operation on rows is done, 
+  # Board will fill Rows' cells, using Coords from a row and Cells from a Board.
   def new(n_front, n_back, cells) do
     %Row{
       n_front: n_front,
@@ -15,24 +22,71 @@ defmodule Towers.Row do
     }
   end
 
+  def digest_cells(cells), do: digest(%Row{cells: cells})
+
   def digest(%Row{cells: cells} = row) do
+    IO.inspect("row_digest_1:")
+
+    IO.inspect(
+      row.cells
+      |> Enum.map(fn cell -> {cell.value, MapSet.to_list(cell.values)} end)
+    )
+
     discovered_values =
       cells
-      |> Enum.filter(& &1.value)
+      |> Enum.filter(&(&1.value != nil))
       |> Enum.map(& &1.value)
 
-    if (has_duplicates?(discovered_values)) do
-      throw "Duplicates, try again"
+    if has_duplicates?(discovered_values) do
+      IO.inspect(cells)
+      IO.inspect(discovered_values)
+      throw("row_duplicates")
       Process.sleep(2000)
     end
-      
-    discovered_values_set = 
-      discovered_values
+
+    all_values =
+      cells
+      |> Enum.reduce([], fn %Cell{values: values}, acc ->
+        acc ++ MapSet.to_list(values)
+      end)
+
+    uniques_set =
+      all_values
+      |> Enum.group_by(fn v ->
+        Enum.count(all_values, &(&1 == v))
+      end)
+      |> Map.get(1, [])
       |> Enum.into(MapSet.new())
 
-    %Row{
-      cells: Enum.map(cells, &Cell.assign_value(&1, discovered_values_set))
+    singles_set =
+      cells
+      |> Enum.filter(&(MapSet.size(&1.values) == 1))
+      |> Enum.reduce(MapSet.new(), &MapSet.union(&1.values, &2))
+
+    discovered_set = Enum.into(discovered_values, MapSet.new())
+
+    new_cells =
+      Enum.map(cells, fn cell ->
+        cell
+        |> Cell.apply_singles(singles_set)
+        |> Cell.apply_uniques(uniques_set)
+        |> Cell.apply_discovered(discovered_set)
+        |> Cell.apply_values()
+      end)
+
+    result = %Row{
+      cells: new_cells
     }
+
+    if new_cells != cells do
+      # IO.inspect("row_digest_2:")
+      # IO.inspect(result)
+      digest(result)
+    else
+      # IO.inspect("row_digest_3:")
+      # IO.inspect(result)
+      result
+    end
   end
 
   def has_duplicates?(list), do: Enum.uniq(list) != list

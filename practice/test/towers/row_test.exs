@@ -88,13 +88,15 @@ defmodule Towers.RowTest do
   end
 
   test "digest/1 updates cells:
-    - removes discovered values from Cell.values sets
-    - if Cell.values contains single item, set Cell.value" do
+    - cleans up discovered values from Cell.values (1)
+    - if Cell.values has a unique item, set Cell.value (4)
+    - if Cell.values contains single item, set Cell.value (2, 3)
+  " do
     row = %Row{
       cells: [
         %Cell{
           value: nil,
-          values: MapSet.new([1, 2, 3])
+          values: MapSet.new([1, 2, 3, 4])
         },
         %Cell{
           value: 1,
@@ -102,7 +104,7 @@ defmodule Towers.RowTest do
         },
         %Cell{
           value: nil,
-          values: MapSet.new([4])
+          values: MapSet.new([2])
         },
         %Cell{
           value: nil,
@@ -111,28 +113,50 @@ defmodule Towers.RowTest do
       ]
     }
 
-    values_2_3 = MapSet.new([2, 3])
     values_empty = MapSet.new()
 
     assert %Row{
              cells: [
                %Cell{
-                 value: nil,
-                 values: ^values_2_3
+                 value: 4,
+                 values: ^values_empty
                },
                %Cell{
                  value: 1,
                  values: ^values_empty
                },
                %Cell{
-                 value: 4,
+                 value: 2,
                  values: ^values_empty
                },
                %Cell{
-                 value: nil,
-                 values: ^values_2_3
+                 value: 3,
+                 values: ^values_empty
                }
              ]
            } = Row.digest(row)
   end
+
+  @tag row_digest: true
+  test "digest/1" do
+    empty_set = set()
+    set_1_2 = set([1, 2])
+
+    assert %Row{
+             cells: [
+               %Cell{value: 4, values: ^empty_set},
+               %Cell{value: nil, values: ^set_1_2},
+               %Cell{value: nil, values: ^set_1_2},
+               %Cell{value: 3, values: ^empty_set}
+             ]
+           } =
+             Row.digest_cells([
+               %Cell{values: set([4]), x: 0, y: 1},
+               %Cell{values: set([1, 2, 4]), x: 1, y: 1},
+               %Cell{values: set([1, 2]), x: 2, y: 1},
+               %Cell{values: set([1, 3]), x: 3, y: 1}
+             ])
+  end
+
+  def set(list \\ []), do: MapSet.new(list)
 end

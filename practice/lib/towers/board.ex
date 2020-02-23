@@ -17,67 +17,69 @@ defmodule Towers.Board do
 
     board = %Board{
       cells: cells
-    } 
-    # generate rows, for each row
-    # digest clues
-    # merge
-    # generate rows, for each row
-    #   digest
-    #   merge
+    }
   end
 
   def run do
     board = new()
 
-    board = board
-    |> split_rows
-    |> Enum.map(&Row.digest_clues/1)
-    |> Enum.reduce(board, &Board.merge_row(&2, &1))
+    board =
+      board
+      |> split_rows
+      |> Enum.map(&Row.digest_clues/1)
+      |> Enum.reduce(board, &Board.merge_row(&2, &1))
 
     try do
       loop(board)
-    catch e -> 
-      IO.inspect("OK, running again")
-      run()
+    catch
+      "row_duplicates" ->
+        IO.inspect("Duplicates error! Random approach sucks")
+        run()
+
+      other ->
+        IO.inspect(other)
+        System.halt(0)
     end
-    # rows = board
-    # |> split_rows()
-    # |> Enum.map(&Row.digest/1)
-
-    # board = rows
-    # |> Enum.reduce(board, fn row, board -> 
-    #   Board.merge_row(board, row)
-    # end)
   end
-  
-  def loop(board) do
-    board_new = board
-    |> split_rows
-    |> Enum.map(&Row.digest/1)
-    |> Enum.reduce(board, &Board.merge_row(&2, &1))
-    
-    # Random shooting
-    if (equal?(board, board_new)) do
-      # cells = board_new.cells |> List.flatten()
-      new_cells = board_new.cells
-      |> Enum.map(&random_shot/1)
-      # |> List.flatten()
 
-      # IO.inspect(new_cells)
-      
-      Process.sleep(1000)
-      IEx.pry()
-      
-      loop(%Board{board_new | cells: new_cells})
+  def loop(board, counter \\ 1) do
+    Process.sleep(1000)
+
+    IO.puts("<<<<<<<<<<")
+
+    # IO.inspect(board)
+
+    IO.puts("AAAAAND digest!")
+
+    board_new = digest(board)
+
+    IO.puts(">>>>>>>>")
+
+    if equal?(board, board_new) do
+      # IO.inspect("Board.digest №#{counter} equal, will try random shot...")
+
+      # loop(random_shot(board_new), counter + 1)
+      throw("TODO: random shot")
+      System.halt(0)
     else
-      IEx.pry()
-      # IO.inspect(board)
-      loop(board_new)
+      IO.inspect("Board.digest №#{counter} unequal ")
+
+      loop(board_new, counter + 1)
     end
   end
 
   def cells_discovered_count(%Board{cells: cells}) do
     Enum.count(List.flatten(cells), &Cell.discovered?(&1))
+  end
+
+  def digest(%Board{cells: cells} = board) do
+    board
+    |> digest_merge_hor_rows()
+    |> digest_merge_ver_rows()
+
+    # TODO: Digest horizontal and vertical rows separately,
+    # Or merge horizontal into Cells, and then merge Vertical.
+    # Then merge their results, using smallest values
   end
 
   def split_rows(board) do
@@ -116,52 +118,76 @@ defmodule Towers.Board do
   def merge_row(board, []), do: board
 
   def merge_row(board, [h | t]) do
-    replace_cell(board, h)
+    board
+    |> replace_cell(h)
     |> merge_row(t)
   end
 
-  def replace_cell(board = %Board{cells: cells}, cell) do
-    cells =
-      List.update_at(
-        cells,
-        cell.y,
-        fn row ->
-          List.replace_at(row, cell.x, cell)
-        end
-      )
-
+  def replace_cell(board = %Board{cells: cells}, %Cell{} = cell) do
     %Board{
       board
-      | cells: cells
+      | cells:
+          List.update_at(
+            cells,
+            cell.y,
+            &List.replace_at(&1, cell.x, cell)
+          )
     }
   end
 
-  def cell_at(board, x, y) do
+  def cell_at(board, x, y) when is_integer(x) and is_integer(y) do
     board.cells
     |> Enum.at(y)
     |> Enum.at(x)
   end
 
-  # TODO: make random shot work nicely
-  # Fucking random shot should be developed...
-  def random_shot(cells, cells_shot \\ 0)
-  def random_shot([], _), do: []
-  def random_shot([h | t] = cells, cells_shot) do
-    if MapSet.size(h.values) == 2 && cells_shot < 1 do
-      IO.inspect("Alright, making a guess")
-      [%Cell{
-        h | 
-        value: Enum.at(h.values, :rand.uniform(MapSet.size(h.values) - 1))
-      } | random_shot(t, cells_shot + 1)]
-    else
-      [h | random_shot(t, cells_shot)]
-    end
+  def random_shot(board) do
+    cell =
+      board.cells
+      |> List.flatten()
+      |> Enum.filter(fn %Cell{values: values} -> MapSet.size(values) == 2 end)
+      |> Enum.sort_by(fn %Cell{values: values} -> MapSet.size(values) end)
+      |> List.first()
+
+    new_value = Enum.at(cell.values, :rand.uniform(MapSet.size(cell.values) - 1))
+
+    new_cell = %Cell{
+      cell
+      | value: new_value,
+        values: MapSet.new()
+    }
+
+    replace_cell(board, new_cell)
   end
 
   def equal?(board1, board2) do
-    l1 = List.flatten(board1.cells) |> Enum.map(fn c -> {c.value, c.values} end)
-    l2 = List.flatten(board2.cells) |> Enum.map(fn c -> {c.value, c.values} end)
+    board1 == board2
+  end
 
-    l1 == l2
+  def print(board) do
+    board.cells
+    |> Enum.map(fn row -> Enum.map(row, &{&1.value, &1.values}) end)
+    |> IO.inspect()
+
+    board
+  end
+
+  def digest_merge_ver_rows(board = %Board{cells: cells}) do
+    cells
+    |> Enum.zip()
+    |> Enum.map(&Tuple.to_list/1)
+    |> digest_merge(board)
+  end
+
+  def digest_merge_hor_rows(board = %Board{cells: cells}) do
+    digest_merge(cells, board)
+  end
+
+  def digest_merge(cells, board) do
+    cells
+    |> Enum.map(&Row.digest_cells/1)
+    |> Enum.reduce(board, fn row, board ->
+      Board.merge_row(board, row)
+    end)
   end
 end
