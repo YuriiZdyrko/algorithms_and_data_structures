@@ -5,43 +5,29 @@ defmodule Towers.Row do
 
   alias Towers.{Cell}
 
-  @board_size 4
+  defstruct [:n_front, :n_back, cells: [], coords: []]
 
-  defstruct [:n_front, :n_back, cells: []]
-
-  # TODO: Refactor rows, to be persistent. Transient Rows has been dumb idea.
-  # Inside Row store coords of cells, n_front, n_back.
-  # Board will have hor_rows Row[], and ver_rows Row[]
-  # Every time some operation on rows is done, 
-  # Board will fill Rows' cells, using Coords from a row and Cells from a Board.
   def new(n_front, n_back, cells) do
     %Row{
       n_front: n_front,
       n_back: n_back,
       cells: cells
     }
+    |> digest_clues()
   end
 
-  def digest_cells(cells), do: digest(%Row{cells: cells})
+  def digest_cells(row, cells) do
+    digest(%Row{row | cells: cells})
+  end
 
-  def digest(%Row{cells: cells} = row) do
-    IO.inspect("row_digest_1:")
-
-    IO.inspect(
-      row.cells
-      |> Enum.map(fn cell -> {cell.value, MapSet.to_list(cell.values)} end)
-    )
-
+  def digest(row = %Row{cells: cells}) do
     discovered_values =
       cells
       |> Enum.filter(&(&1.value != nil))
       |> Enum.map(& &1.value)
 
     if has_duplicates?(discovered_values) do
-      IO.inspect(cells)
-      IO.inspect(discovered_values)
-      throw("row_duplicates")
-      Process.sleep(2000)
+      throw("Error in algorithm - row has duplicates")
     end
 
     all_values =
@@ -65,28 +51,21 @@ defmodule Towers.Row do
 
     discovered_set = Enum.into(discovered_values, MapSet.new())
 
-    new_cells =
-      Enum.map(cells, fn cell ->
-        cell
+    result = %Row{
+      row |
+      cells: cells
+      |> Enum.map(&(
+        &1
         |> Cell.apply_singles(singles_set)
         |> Cell.apply_uniques(uniques_set)
         |> Cell.apply_discovered(discovered_set)
         |> Cell.apply_values()
-      end)
-
-    result = %Row{
-      cells: new_cells
+      ))
     }
 
-    if new_cells != cells do
-      # IO.inspect("row_digest_2:")
-      # IO.inspect(result)
-      digest(result)
-    else
-      # IO.inspect("row_digest_3:")
-      # IO.inspect(result)
-      result
-    end
+    if result != row, 
+      do: digest(result), 
+      else: result
   end
 
   def has_duplicates?(list), do: Enum.uniq(list) != list
@@ -108,8 +87,11 @@ defmodule Towers.Row do
         ]
   """
   def digest_clues(%Row{cells: cells} = row) do
+    size = length(cells)
+
     new_values =
-      permutations(Enum.to_list(1..@board_size))
+      size
+      |> permutations()
       |> Enum.filter(&permutation_valid?(row, &1))
       |> Enum.zip()
       |> Enum.map(&MapSet.new(Tuple.to_list(&1)))
@@ -117,19 +99,26 @@ defmodule Towers.Row do
     cells =
       cells
       |> Enum.with_index()
-      |> Enum.map(fn {%Cell{values: prev_v} = cell, i} ->
-        new_v = Enum.at(new_values, i)
-        %Cell{cell | values: MapSet.union(prev_v, new_v)}
+      |> Enum.map(fn {cell, i} ->
+        %Cell{
+          cell
+          | values: Enum.at(new_values, i)
+        }
       end)
 
     %Row{row | cells: cells}
   end
 
+  def permutations(size) when is_integer(size) do
+    Enum.to_list(1..size)
+    |> permutations()
+  end
+
+  def permutations([]), do: [[]]
+
   @doc """
   TODO: understand how this recursion works
   """
-  def permutations([]), do: [[]]
-
   def permutations(list) do
     for elem <- list,
         rest <- permutations(list -- [elem]),

@@ -2,19 +2,30 @@ defmodule Towers.RowTest do
   use ExUnit.Case
   alias Towers.{Row, Cell}
 
+  @tag new_row: true
   test "Returns new Row struct" do
     n_front = 3
-    n_back = 1
+    n_back = 2
 
     cells =
-      for {x, y} <- [{0, 0}, {1, 0}, {2, 0}] do
+      for {x, y} <- [{0, 0}, {1, 0}, {2, 0}, {3, 0}] do
         Cell.new(x, y)
       end
+
+    values_1 = set([1, 2])
+    values_2 = set([2, 3])
+    values_3 = set([4])
+    values_4 = set([1, 2, 3])
 
     assert %Row{
              n_back: ^n_back,
              n_front: ^n_front,
-             cells: ^cells
+             cells: [
+               %Cell{value: nil, values: ^values_1, x: 0, y: 0},
+               %Cell{value: nil, values: ^values_2, x: 1, y: 0},
+               %Cell{value: nil, values: ^values_3, x: 2, y: 0},
+               %Cell{value: nil, values: ^values_4, x: 3, y: 0}
+             ]
            } = Row.new(n_front, n_back, cells)
   end
 
@@ -150,12 +161,14 @@ defmodule Towers.RowTest do
                %Cell{value: 3, values: ^empty_set}
              ]
            } =
-             Row.digest_cells([
-               %Cell{values: set([4]), x: 0, y: 1},
-               %Cell{values: set([1, 2, 4]), x: 1, y: 1},
-               %Cell{values: set([1, 2]), x: 2, y: 1},
-               %Cell{values: set([1, 3]), x: 3, y: 1}
-             ])
+             Row.digest(%Row{
+               cells: [
+                 %Cell{values: set([4]), x: 0, y: 1},
+                 %Cell{values: set([1, 2]), x: 1, y: 1},
+                 %Cell{values: set([1, 2]), x: 2, y: 1},
+                 %Cell{values: set([1, 3]), x: 3, y: 1}
+               ]
+             })
   end
 
   def set(list \\ []), do: MapSet.new(list)

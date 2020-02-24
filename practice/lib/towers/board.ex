@@ -1,193 +1,162 @@
 defmodule Towers.Board do
-  defstruct cells: []
+  defstruct [:size, :rows_ver, :rows_hor, cells: [], clues: []]
 
   import IEx
   alias Towers.{Board, Row, Cell}
 
   @board_size 4
-
   @clues [2, 2, 1, 3, 2, 2, 3, 1, 1, 2, 2, 3, 3, 2, 1, 3]
 
-  def new(clues \\ @clues) do
+  def solve(clues \\ @clues) do
+    clues
+    |> new() 
+    |> loop()
+  end
+
+  def new(clues \\ @clues, size \\ @board_size) do
     cells =
-      for x <- 0..(@board_size - 1), y <- 0..(@board_size - 1) do
+      for x <- 0..(size - 1), y <- 0..(size - 1) do
         Cell.new(y, x)
       end
-      |> Enum.chunk_every(4)
+      |> Enum.chunk_every(size)
 
-    board = %Board{
-      cells: cells
+    %Board{
+      cells: cells,
+      clues: clues,
+      size: size
     }
+    |> compute_rows()
   end
 
-  def run do
-    board = new()
-
-    board =
-      board
-      |> split_rows
-      |> Enum.map(&Row.digest_clues/1)
-      |> Enum.reduce(board, &Board.merge_row(&2, &1))
-
-    try do
-      loop(board)
-    catch
-      "row_duplicates" ->
-        IO.inspect("Duplicates error! Random approach sucks")
-        run()
-
-      other ->
-        IO.inspect(other)
-        System.halt(0)
-    end
-  end
-
-  def loop(board, counter \\ 1) do
-    Process.sleep(1000)
-
-    IO.puts("<<<<<<<<<<")
-
-    # IO.inspect(board)
-
-    IO.puts("AAAAAND digest!")
-
+  def loop(board) do
     board_new = digest(board)
 
-    IO.puts(">>>>>>>>")
-
-    if equal?(board, board_new) do
-      # IO.inspect("Board.digest №#{counter} equal, will try random shot...")
-
-      # loop(random_shot(board_new), counter + 1)
-      throw("TODO: random shot")
-      System.halt(0)
+    if board == board_new do
+      if Enum.any?(List.flatten(board.cells), &is_nil(&1.value)),
+        do: throw("Ambiquity encountered"),
+        else: result(board_new)
     else
-      IO.inspect("Board.digest №#{counter} unequal ")
-
-      loop(board_new, counter + 1)
+      loop(board_new)
     end
   end
 
-  def cells_discovered_count(%Board{cells: cells}) do
-    Enum.count(List.flatten(cells), &Cell.discovered?(&1))
+  def result(%Board{cells: cells}) do
+    cells
+    |> Enum.map(fn row_cells -> 
+      Enum.map(row_cells, &(&1.value))
+    end)
   end
 
-  def digest(%Board{cells: cells} = board) do
-    board
-    |> digest_merge_hor_rows()
-    |> digest_merge_ver_rows()
-
-    # TODO: Digest horizontal and vertical rows separately,
-    # Or merge horizontal into Cells, and then merge Vertical.
-    # Then merge their results, using smallest values
-  end
-
-  def split_rows(board) do
+  def compute_rows(board = %Board{cells: cells, clues: clues, size: size}) do
     [
       front_vert,
       back_hor,
       back_vert,
       front_hor
-    ] = Enum.chunk_every(@clues, @board_size)
+    ] = Enum.chunk_every(clues, size)
 
-    hor_rows_cells = board.cells
-
-    vert_rows_cells =
-      board.cells
-      |> Enum.zip()
-      |> Enum.map(&Tuple.to_list(&1))
-
-    hor_rows = init_rows(hor_rows_cells, Enum.reverse(front_hor), back_hor)
-    vert_rows = init_rows(vert_rows_cells, front_vert, Enum.reverse(back_vert))
-
-    hor_rows ++ vert_rows
-  end
-
-  def init_rows(cells, front_clues, back_clues) do
-    cells
-    |> Enum.zip(front_clues)
-    |> Enum.zip(back_clues)
-    |> Enum.map(fn {{row_cells, front_clue}, back_clue} ->
-      Row.new(front_clue, back_clue, row_cells)
-    end)
-  end
-
-  def merge_row(board, %Row{cells: cells}),
-    do: merge_row(board, cells)
-
-  def merge_row(board, []), do: board
-
-  def merge_row(board, [h | t]) do
     board
-    |> replace_cell(h)
-    |> merge_row(t)
+    |> init_merge_rows(Enum.reverse(front_hor), back_hor, :rows_hor)
+    |> init_merge_rows(front_vert, Enum.reverse(back_vert), :rows_ver)
   end
 
-  def replace_cell(board = %Board{cells: cells}, %Cell{} = cell) do
+  def init_merge_rows(board = %Board{cells: cells}, front_clues, back_clues, rows_key)
+      when rows_key in [:rows_hor, :rows_ver] do
+    cells =
+      board
+      |> cells_for_rows(rows_key)
+      |> Enum.zip(front_clues)
+      |> Enum.zip(back_clues)
+      |> Enum.map(fn {{row_cells, front_clue}, back_clue} ->
+        Row.new(front_clue, back_clue, row_cells)
+      end)
+
+    merge_rows(board, cells, rows_key)
+  end
+
+  def merge_rows(board, rows, rows_key) do
+    rows
+    |> Enum.reduce(board, &merge_row(&2, &1))
+    |> Map.replace(
+      rows_key,
+      rows |> Enum.map(&Map.replace(&1, :cells, []))
+    )
+  end
+
+  def merge_row(board, %Row{cells: cells}) do
+    cells
+    |> Enum.reduce(board, &merge_cell(&2, &1))
+  end
+
+  def merge_cell(
+        board = %Board{cells: cells},
+        %Cell{x: x, y: y, value: value, values: values}
+      ) do
+    update_cell_at(
+      board,
+      x,
+      y,
+      &%Cell{
+        &1
+        | values:
+            if(Cell.pristine?(&1),
+              do: values,
+              else: MapSet.intersection(&1.values, values)
+            ),
+          value: &1.value || value
+      }
+    )
+  end
+
+  def update_cell_at(board = %Board{cells: cells}, x, y, updater_fn) do
     %Board{
       board
       | cells:
           List.update_at(
             cells,
-            cell.y,
-            &List.replace_at(&1, cell.x, cell)
+            y,
+            fn row ->
+              List.update_at(
+                row,
+                x,
+                &updater_fn.(&1)
+              )
+            end
           )
     }
   end
 
-  def cell_at(board, x, y) when is_integer(x) and is_integer(y) do
+  def cell_at(board, x, y) do
     board.cells
     |> Enum.at(y)
     |> Enum.at(x)
   end
 
-  def random_shot(board) do
-    cell =
-      board.cells
-      |> List.flatten()
-      |> Enum.filter(fn %Cell{values: values} -> MapSet.size(values) == 2 end)
-      |> Enum.sort_by(fn %Cell{values: values} -> MapSet.size(values) end)
-      |> List.first()
-
-    new_value = Enum.at(cell.values, :rand.uniform(MapSet.size(cell.values) - 1))
-
-    new_cell = %Cell{
-      cell
-      | value: new_value,
-        values: MapSet.new()
-    }
-
-    replace_cell(board, new_cell)
+  def digest(%Board{cells: cells} = board) do
+    board
+    |> digest_merge_rows(:rows_hor)
+    |> digest_merge_rows(:rows_ver)
   end
 
-  def equal?(board1, board2) do
-    board1 == board2
-  end
-
-  def print(board) do
-    board.cells
-    |> Enum.map(fn row -> Enum.map(row, &{&1.value, &1.values}) end)
-    |> IO.inspect()
+  def digest_merge_rows(board = %Board{cells: cells}, rows_key)
+      when rows_key in [:rows_hor, :rows_ver] do
+    rows =
+      board
+      |> cells_for_rows(rows_key)
+      |> Enum.zip(Map.fetch!(board, rows_key))
+      |> Enum.map(&Row.digest_cells(elem(&1, 1), elem(&1, 0)))
 
     board
+    |> merge_rows(rows, rows_key)
   end
 
-  def digest_merge_ver_rows(board = %Board{cells: cells}) do
-    cells
+  defp cells_for_rows(board, :rows_hor) do
+    board.cells
+  end
+
+  defp cells_for_rows(board, :rows_ver) do
+    board.cells
     |> Enum.zip()
-    |> Enum.map(&Tuple.to_list/1)
-    |> digest_merge(board)
-  end
-
-  def digest_merge_hor_rows(board = %Board{cells: cells}) do
-    digest_merge(cells, board)
-  end
-
-  def digest_merge(cells, board) do
-    cells
-    |> Enum.map(&Row.digest_cells/1)
-    |> Enum.reduce(board, fn row, board ->
-      Board.merge_row(board, row)
-    end)
+    |> Enum.map(&Tuple.to_list(&1))
   end
 end

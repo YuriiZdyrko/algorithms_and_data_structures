@@ -4,9 +4,7 @@ defmodule Towers.Cell do
   defstruct [:x, :y, value: nil, values: MapSet.new()]
   @enforce_keys [:x, :y]
 
-  @board_size 4
-
-  def new(x, y) when x < @board_size and y < @board_size do
+  def new(x, y) do
     %Cell{x: x, y: y}
   end
 
@@ -61,6 +59,11 @@ defmodule Towers.Cell do
       cell
     end
   end
+
+  def pristine?(%Cell{value: nil, values: values}),
+    do: MapSet.size(values) == 0
+
+  def pristine?(%Cell{}), do: false
 
   def discovered?(%Cell{value: value}),
     do: not is_nil(value)
