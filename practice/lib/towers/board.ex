@@ -1,13 +1,9 @@
 defmodule Towers.Board do
   defstruct [:size, :rows_ver, :rows_hor, cells: [], clues: []]
-
   alias Towers.{Board, Row, Cell}
-  import IEx
 
   @board_size 4
   @clues [2, 2, 1, 3, 2, 2, 3, 1, 1, 2, 2, 3, 3, 2, 1, 3]
-
-  # @clues [2, 2, 1, 3, 2, 2, 3, 1, 1, 2, 2, 3, 3, 2, 1, 3]
 
   def new(clues \\ @clues, size \\ @board_size) do
     cells =
@@ -24,39 +20,34 @@ defmodule Towers.Board do
     |> compute_rows()
   end
 
-  def loop(board, status \\ :looping)
+  def digest_loop(board, status \\ :continue)
 
-  def loop(board, :looping) do
+  def digest_loop(board, :continue) do
     board_new = digest(board)
-    IO.puts("loop")
-    IO.inspect(board_new)
+    IO.puts("loop...")
 
-    status =
-      if board != board_new do
-        :looping
-      else
-        nil_values_remain =
-          board.cells
-          |> List.flatten()
-          |> Enum.any?(&is_nil(&1.value))
+    if board != board_new do
+      digest_loop(board_new)
+    else
+      nil_values_remain =
+        board.cells
+        |> List.flatten()
+        |> Enum.any?(&is_nil(&1.value))
 
-        if !nil_values_remain do
-          :done
-        else
-          :ambiquity
-        end
-      end
-
-    loop(board_new, status)
+      if !nil_values_remain,
+        do: digest_loop_success(board_new, :done_by_digest),
+        else: try_to_resolve_ambiquity(board_new)
+    end
   end
 
-  def loop(board, :done) do
+  def digest_loop_success(board, :done_by_digest) do
+    IO.puts("digest_loop success :)")
     {:done, board}
   end
 
-  def loop(board, :ambiquity) do
-    IO.puts("Ambiquity encountered")
-    try_to_resolve_ambiquity(board)
+  def digest_loop_success(board, :done_by_guess) do
+    IO.puts("guess_loop success :) \n")
+    {:done, board}
   end
 
   def result(%Board{cells: cells}) do
@@ -163,7 +154,9 @@ defmodule Towers.Board do
       board
       |> cells_for_rows(rows_key)
       |> Enum.zip(Map.fetch!(board, rows_key))
-      |> Enum.map(&Row.digest_cells(elem(&1, 1), elem(&1, 0)))
+      |> Enum.map(fn {cells, row} ->
+        Row.digest_cells(row, cells)
+      end)
 
     board
     |> merge_rows(rows, rows_key)
@@ -180,17 +173,9 @@ defmodule Towers.Board do
       row
       |> Enum.map(& &1.value)
 
-    # IO.inspect("heights:")
-    # IO.inspect(heights)
-
-    row_hor = Enum.at(board.rows_hor, Enum.at(row, 0).y)
-
     empty_cells =
       row
       |> Enum.filter(&is_nil(&1.value))
-
-    # IO.inspect("empty_cells:")
-    # IO.inspect(empty_cells)
 
     nil_heights =
       empty_cells
@@ -199,23 +184,10 @@ defmodule Towers.Board do
       |> MapSet.to_list()
       |> Row.permutations()
 
-    IO.inspect("nilheights:")
-    IO.inspect(nil_heights)
-
-    # permuts =
-    #   nil_heights
-    #   |> Enum.map(fn nh -> 
-    #     join_heights(heights, nh)
-    #   end)
-    # |> Enum.filter(&Row.has_duplicates?/1)
-
-    # IO.inspect("permuts:")
-    # IO.inspect(permuts)
-
-    empty_cells_with_permuts =
+    empty_cells_permuts =
       nil_heights
-      |> Enum.map(fn permut_values ->
-        permut_values
+      |> Enum.map(fn permut ->
+        permut
         |> Enum.zip(empty_cells)
         |> Enum.map(fn {permut_value, cell} ->
           %Cell{
@@ -226,13 +198,11 @@ defmodule Towers.Board do
         end)
       end)
 
-    try_permuts(board, empty_cells_with_permuts)
+    guess_loop(board, empty_cells_permuts)
   end
 
-  def try_permuts(board, [cells | t]) do
-    IO.puts("try_permuts...")
-
-    IO.inspect(cells)
+  def guess_loop(board, [cells | t]) do
+    IO.puts("guess_loop...")
 
     tentative_board =
       cells
@@ -241,23 +211,13 @@ defmodule Towers.Board do
         |> update_cell_at(x, y, fn _ -> cell end)
       end)
 
-    IO.inspect(tentative_board)
-
-    with {:done, board} <- loop(tentative_board),
-         {:ok, board} <- validate_against_clues(board),
-         {:ok, board} <- validate_unique_in_a_row(board) do
-      IO.puts("try_permuts success :)")
-      {:done, board}
+    with {:done, board} <- digest_loop(tentative_board),
+         {:ok, board} <- validate_against_clues(board) do
+      digest_loop_success(board, :done_by_guess)
     else
-      {:ambiquity, board} ->
-        IO.puts("""
-          try_permuts failed :( \n 
-          Too much ambiquity... \n
-          Greedier solution is required \n
-        """)
-
       {:clues_error, _board} ->
-        try_permuts(board, t)
+        IO.puts("guess_loop failed attempt :-/")
+        guess_loop(board, t)
     end
   end
 
@@ -271,60 +231,23 @@ defmodule Towers.Board do
     |> Enum.map(&Tuple.to_list(&1))
   end
 
-  def join_heights([], _), do: []
-
-  def join_heights(rest, []) do
-    rest
-  end
-
-  def join_heights([h1 | t1], [h2 | t2]) when is_nil(h1) do
-    [h2] ++ join_heights(t1, t2)
-  end
-
-  def join_heights([h1 | t1], rest) when not is_nil(h1) do
-    [h1] ++ join_heights(t1, rest)
-  end
-
   def validate_against_clues(board) do
-    cells_rows_ver = cells_for_rows(board, :rows_ver)
-    cells_rows_hor = cells_for_rows(board, :rows_hor)
-
-    result =
-      0..(board.size - 1)
-      |> Enum.all?(fn i ->
-        row_hor = Enum.at(board.rows_hor, i)
-        row_ver = Enum.at(board.rows_ver, i)
-        cells_hor = Enum.at(cells_rows_hor, i)
-        cells_ver = Enum.at(cells_rows_ver, i)
-
-        result =
-          Row.cells_valid?(row_hor, cells_hor) &&
-            Row.cells_valid?(row_ver, cells_ver)
-
-        if !result do
-          IO.puts("try_permuts failed attempt :-/")
-        end
-
-        result
-      end)
-
-    if result,
-      do: {:ok, board},
-      else: {:clues_error, board}
-  end
-
-  def validate_unique_in_a_row(board) do
-    all_cells = cells_for_rows(board, :rows_hor) ++ cells_for_rows(board, :rows_ver)
-
-    if Enum.all?(
-         all_cells,
-         fn cells_row ->
-           Enum.uniq(cells_row) == cells_row
-         end
-       ) do
-      {:ok, board}
-    else
-      {:unique_cells_error, board}
+    all_valid? = 0..(board.size - 1)
+    |> Enum.all?(fn i ->
+      hor_valid? = Row.cells_allowed_by_clues?(
+        Enum.at(board.rows_hor, i),
+        Enum.at(cells_for_rows(board, :rows_hor), i)
+      )
+      ver_valid? = Row.cells_allowed_by_clues?(
+        Enum.at(board.rows_ver, i),
+        Enum.at(cells_for_rows(board, :rows_ver), i)
+      )
+      hor_valid? and ver_valid?
+    end)
+    
+    case all_valid? do
+      true -> {:ok, board}
+      _ -> {:clues_error, board}
     end
   end
 end
@@ -333,11 +256,8 @@ defmodule PuzzleSolver do
   import Towers.Board
 
   def solve(clues) do
-    with {:done, board} <- loop(new(clues)) do
+    with {:done, board} <- digest_loop(new(clues)) do
       result(board)
-    else
-      other ->
-        IO.puts("WAT")
     end
   end
 end

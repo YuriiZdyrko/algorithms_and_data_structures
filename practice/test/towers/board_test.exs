@@ -150,18 +150,5 @@ defmodule Towers.Board2Test do
            } = Board.new() |> Board.digest()
   end
 
-  test "validate_against_clues" do
-    # TODO
-  end
-
-  @tag join_heights: true
-  test "join_heights" do
-    assert [1, 2, 3, 4] =
-             Board.join_heights(
-               [nil, 2, 3, nil],
-               [1, 4]
-             )
-  end
-
   def set(list \\ []), do: MapSet.new(list)
 end

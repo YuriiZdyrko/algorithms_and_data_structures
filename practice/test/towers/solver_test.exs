@@ -26,13 +26,13 @@ defmodule Towers.PuzzleSolverTest do
     )
   end
 
-   @tag solver: true
-    test "test 4" do
-      check(
-        [0, 2, 0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 0, 1, 2],
-        [[3, 2, 1, 4], [4, 1, 3, 2], [1, 4, 2, 3], [2, 3, 4, 1]]
-      )
-    end
+  @tag solver: true
+  test "test 4" do
+    check(
+      [0, 2, 0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 0, 1, 2],
+      [[3, 2, 1, 4], [4, 1, 3, 2], [1, 4, 2, 3], [2, 3, 4, 1]]
+    )
+  end
 
   defp check(clues, result) do
     assert PuzzleSolver.solve(clues) == result

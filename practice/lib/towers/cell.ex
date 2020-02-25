@@ -1,7 +1,5 @@
 defmodule Towers.Cell do
   alias __MODULE__
-  import IEx
-
   defstruct [:x, :y, value: nil, values: MapSet.new()]
   @enforce_keys [:x, :y]
 

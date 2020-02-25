@@ -1,10 +1,6 @@
 defmodule Towers.Row do
   alias __MODULE__
-
-  import IEx
-
   alias Towers.{Cell}
-
   defstruct [:n_front, :n_back, cells: []]
 
   def new(n_front, n_back, cells) do
@@ -21,40 +17,21 @@ defmodule Towers.Row do
   end
 
   def digest(row = %Row{cells: cells}) do
-    # IO.inspect(cells)
+    all_values =
+      cells
+      |> Enum.flat_map(&MapSet.to_list(&1.values))
 
     discovered_values =
       cells
       |> Enum.filter(&(&1.value != nil))
       |> Enum.map(& &1.value)
 
-    IO.inspect(discovered_values)
-
-    with %Towers.Row{
-           cells: [
-             %Towers.Cell{x: 0, y: 0},
-             _,
-             _,
-             %Towers.Cell{x: 0, y: 3}
-           ]
-         } <- row do
-      IO.inspect(row)
-    end
-
-    if has_duplicates?(discovered_values) do
-      throw("failed_ambiquity_reslove")
-    end
-
-    all_values =
-      cells
-      |> Enum.flat_map(&MapSet.to_list(&1.values))
-
     singles_set =
       cells
       |> Enum.filter(&(MapSet.size(&1.values) == 1))
       |> Enum.reduce(MapSet.new(), &MapSet.union(&1.values, &2))
 
-    discovered_set = Enum.into(discovered_values, MapSet.new())
+    discovered_set = MapSet.new(discovered_values)
 
     uniques_set =
       all_values
@@ -91,7 +68,8 @@ defmodule Towers.Row do
   @doc """
     Set initial values[] set for each cell in a row,
     using clues (n_front and n_back).
-    After digest clues are no longer needed, 
+    After digest clues are no longer needed,
+    except try_permuts phase,
     because they are transformed here into cells' values[].
 
     For example for:
@@ -163,7 +141,7 @@ defmodule Towers.Row do
     end
   end
 
-  def cells_valid?(row, cells) do
+  def cells_allowed_by_clues?(row, cells) do
     heights =
       cells
       |> Enum.map(& &1.value)
