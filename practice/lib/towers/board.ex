@@ -29,6 +29,7 @@ defmodule Towers.Board do
   def loop(board, :looping) do
     board_new = digest(board)
     IO.puts("loop")
+    IO.inspect(board_new)
 
     status =
       if board != board_new do
@@ -50,7 +51,6 @@ defmodule Towers.Board do
   end
 
   def loop(board, :done) do
-    IO.puts("Done!")
     {:done, board}
   end
 
@@ -180,11 +180,17 @@ defmodule Towers.Board do
       row
       |> Enum.map(& &1.value)
 
+    # IO.inspect("heights:")
+    # IO.inspect(heights)
+
     row_hor = Enum.at(board.rows_hor, Enum.at(row, 0).y)
 
     empty_cells =
       row
       |> Enum.filter(&is_nil(&1.value))
+
+    # IO.inspect("empty_cells:")
+    # IO.inspect(empty_cells)
 
     nil_heights =
       empty_cells
@@ -193,19 +199,29 @@ defmodule Towers.Board do
       |> MapSet.to_list()
       |> Row.permutations()
 
-    permuts =
-      nil_heights
-      |> Enum.map(&join_heights(heights, &1))
+    IO.inspect("nilheights:")
+    IO.inspect(nil_heights)
+
+    # permuts =
+    #   nil_heights
+    #   |> Enum.map(fn nh -> 
+    #     join_heights(heights, nh)
+    #   end)
+    # |> Enum.filter(&Row.has_duplicates?/1)
+
+    # IO.inspect("permuts:")
+    # IO.inspect(permuts)
 
     empty_cells_with_permuts =
-      permuts
+      nil_heights
       |> Enum.map(fn permut_values ->
         permut_values
         |> Enum.zip(empty_cells)
         |> Enum.map(fn {permut_value, cell} ->
           %Cell{
             cell
-            | value: permut_value
+            | value: permut_value,
+              values: MapSet.new()
           }
         end)
       end)
@@ -216,6 +232,8 @@ defmodule Towers.Board do
   def try_permuts(board, [cells | t]) do
     IO.puts("try_permuts...")
 
+    IO.inspect(cells)
+
     tentative_board =
       cells
       |> Enum.reduce(board, fn cell = %Cell{x: x, y: y}, board ->
@@ -223,8 +241,11 @@ defmodule Towers.Board do
         |> update_cell_at(x, y, fn _ -> cell end)
       end)
 
+    IO.inspect(tentative_board)
+
     with {:done, board} <- loop(tentative_board),
-          {:ok, board} <- validate_against_clues(board) do
+         {:ok, board} <- validate_against_clues(board),
+         {:ok, board} <- validate_unique_in_a_row(board) do
       IO.puts("try_permuts success :)")
       {:done, board}
     else
@@ -256,8 +277,12 @@ defmodule Towers.Board do
     rest
   end
 
-  def join_heights([h1 | t1], [h2 | t2]) do
-    [h1 || h2] ++ join_heights(t1, t2)
+  def join_heights([h1 | t1], [h2 | t2]) when is_nil(h1) do
+    [h2] ++ join_heights(t1, t2)
+  end
+
+  def join_heights([h1 | t1], rest) when not is_nil(h1) do
+    [h1] ++ join_heights(t1, rest)
   end
 
   def validate_against_clues(board) do
@@ -286,6 +311,21 @@ defmodule Towers.Board do
     if result,
       do: {:ok, board},
       else: {:clues_error, board}
+  end
+
+  def validate_unique_in_a_row(board) do
+    all_cells = cells_for_rows(board, :rows_hor) ++ cells_for_rows(board, :rows_ver)
+
+    if Enum.all?(
+         all_cells,
+         fn cells_row ->
+           Enum.uniq(cells_row) == cells_row
+         end
+       ) do
+      {:ok, board}
+    else
+      {:unique_cells_error, board}
+    end
   end
 end
 

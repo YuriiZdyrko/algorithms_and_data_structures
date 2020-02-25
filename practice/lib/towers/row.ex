@@ -21,12 +21,27 @@ defmodule Towers.Row do
   end
 
   def digest(row = %Row{cells: cells}) do
+    # IO.inspect(cells)
+
     discovered_values =
       cells
       |> Enum.filter(&(&1.value != nil))
       |> Enum.map(& &1.value)
 
-      if has_duplicates?(discovered_values) do
+    IO.inspect(discovered_values)
+
+    with %Towers.Row{
+           cells: [
+             %Towers.Cell{x: 0, y: 0},
+             _,
+             _,
+             %Towers.Cell{x: 0, y: 3}
+           ]
+         } <- row do
+      IO.inspect(row)
+    end
+
+    if has_duplicates?(discovered_values) do
       throw("failed_ambiquity_reslove")
     end
 
@@ -51,6 +66,8 @@ defmodule Towers.Row do
       |> MapSet.difference(singles_set)
       |> MapSet.difference(discovered_set)
 
+    size = length(cells)
+
     result = %Row{
       row
       | cells:
@@ -58,8 +75,8 @@ defmodule Towers.Row do
           |> Enum.map(
             &(&1
               |> Cell.apply_singles(singles_set)
+              |> Cell.apply_discovered(discovered_set, size)
               |> Cell.apply_uniques(uniques_set)
-              |> Cell.apply_discovered(discovered_set)
               |> Cell.apply_values())
           )
     }

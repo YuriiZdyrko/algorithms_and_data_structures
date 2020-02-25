@@ -1,5 +1,6 @@
 defmodule Towers.Cell do
   alias __MODULE__
+  import IEx
 
   defstruct [:x, :y, value: nil, values: MapSet.new()]
   @enforce_keys [:x, :y]
@@ -37,13 +38,28 @@ defmodule Towers.Cell do
     end
   end
 
-  def apply_discovered(%Cell{values: values} = cell, set) do
-    values = MapSet.difference(values, set)
+  def apply_discovered(%Cell{values: values} = cell, set, size) do
+    if MapSet.size(set) == size - 1 && is_nil(cell.value) do
+      new_value =
+        1..size
+        |> Enum.into(MapSet.new())
+        |> MapSet.difference(set)
+        |> MapSet.to_list()
+        |> List.first()
 
-    %Cell{
-      cell
-      | values: values
-    }
+      %Cell{
+        cell
+        | values: MapSet.new(),
+          value: new_value
+      }
+    else
+      values = MapSet.difference(values, set)
+
+      %Cell{
+        cell
+        | values: values
+      }
+    end
   end
 
   def apply_uniques(cell, set) do

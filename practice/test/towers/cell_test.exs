@@ -29,7 +29,23 @@ defmodule Towers.CellTest do
                  values: MapSet.new([1, 3, 4]),
                  value: nil
                },
-               MapSet.new([1, 3])
+               MapSet.new([1, 3]),
+               4
+             )
+
+    values2 = MapSet.new()
+
+    assert %Cell{
+             value: 4,
+             values: ^values2
+           } =
+             Cell.apply_discovered(
+               %Cell{
+                 values: MapSet.new([1, 4]),
+                 value: nil
+               },
+               MapSet.new([1, 2, 3]),
+               4
              )
   end
 
