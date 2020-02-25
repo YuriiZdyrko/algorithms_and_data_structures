@@ -109,7 +109,7 @@ defmodule Towers.RowTest do
         end
     }
 
-    cell_values = MapSet.new([1,2,3,4])
+    cell_values = MapSet.new([1, 2, 3, 4])
 
     assert %Row{
              n_front: _,

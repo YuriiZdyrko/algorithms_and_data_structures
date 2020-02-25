@@ -26,17 +26,8 @@ defmodule Towers.Row do
       |> Enum.filter(&(&1.value != nil))
       |> Enum.map(& &1.value)
 
-    # Weird behaviour debug
-    # %Cell{x: x1, y: y1} = Enum.at(cells, 0)
-    # %Cell{x: x2, y: y2} = Enum.at(cells, 3)
-    # if (x1 == 0 and y1 == 3 and x2 == 3 and y2 == 3) do
-    #   IO.puts("weird")
-    #   IO.inspect(row)
-    # end
-    
-    if has_duplicates?(discovered_values) do
-      IEx.pry()
-      throw("Error in algorithm - row has duplicates")
+      if has_duplicates?(discovered_values) do
+      throw("failed_ambiquity_reslove")
     end
 
     all_values =
@@ -153,5 +144,13 @@ defmodule Towers.Row do
     else
       side_valid?(t, n, n_curr, max_height_curr)
     end
+  end
+
+  def cells_valid?(row, cells) do
+    heights =
+      cells
+      |> Enum.map(& &1.value)
+
+    permutation_valid?(row, heights)
   end
 end

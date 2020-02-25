@@ -7,7 +7,7 @@ defmodule Towers.Board2Test do
   #  Merging a row is a responsibility of a Board
 
   @tag new_board: true
-  test "new" do 
+  test "new" do
     clues = [2, 2, 1, 3, 2, 2, 3, 1, 1, 2, 2, 3, 3, 2, 1, 3]
     size = 4
     board = Board.new(clues, size)
@@ -148,6 +148,10 @@ defmodule Towers.Board2Test do
                ]
              ]
            } = Board.new() |> Board.digest()
+  end
+
+  test "validate_against_clues" do
+    # TODO
   end
 
   def set(list \\ []), do: MapSet.new(list)
