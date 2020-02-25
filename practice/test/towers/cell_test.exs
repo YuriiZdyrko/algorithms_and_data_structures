@@ -66,9 +66,4 @@ defmodule Towers.CellTest do
                MapSet.new([1, 2])
              )
   end
-
-  test "discovered?/1 returns correct result" do
-    assert Cell.discovered?(%Cell{value: 1})
-    refute Cell.discovered?(%Cell{value: nil})
-  end
 end

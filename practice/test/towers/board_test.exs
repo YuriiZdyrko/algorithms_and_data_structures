@@ -7,9 +7,9 @@ defmodule Towers.Board2Test do
   #  Merging a row is a responsibility of a Board
 
   @tag new_board: true
-  test "new" do
-    size = 4
+  test "new" do 
     clues = [2, 2, 1, 3, 2, 2, 3, 1, 1, 2, 2, 3, 3, 2, 1, 3]
+    size = 4
     board = Board.new(clues, size)
 
     assert %Board{

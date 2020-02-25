@@ -1,17 +1,11 @@
 defmodule Towers.Board do
   defstruct [:size, :rows_ver, :rows_hor, cells: [], clues: []]
 
-  import IEx
   alias Towers.{Board, Row, Cell}
 
   @board_size 4
   @clues [2, 2, 1, 3, 2, 2, 3, 1, 1, 2, 2, 3, 3, 2, 1, 3]
-
-  def solve(clues \\ @clues) do
-    clues
-    |> new() 
-    |> loop()
-  end
+  # @clues [2, 2, 1, 3, 2, 2, 3, 1, 1, 2, 2, 3, 3, 2, 1, 3]
 
   def new(clues \\ @clues, size \\ @board_size) do
     cells =
@@ -32,9 +26,12 @@ defmodule Towers.Board do
     board_new = digest(board)
 
     if board == board_new do
-      if Enum.any?(List.flatten(board.cells), &is_nil(&1.value)),
-        do: throw("Ambiquity encountered"),
-        else: result(board_new)
+      if Enum.any?(List.flatten(board.cells), &is_nil(&1.value)) do 
+          IO.puts("Ambiquity encountered, result incomplete")
+          result(board_new)
+      else
+         result(board_new)
+      end
     else
       loop(board_new)
     end
@@ -42,8 +39,8 @@ defmodule Towers.Board do
 
   def result(%Board{cells: cells}) do
     cells
-    |> Enum.map(fn row_cells -> 
-      Enum.map(row_cells, &(&1.value))
+    |> Enum.map(fn row_cells ->
+      Enum.map(row_cells, & &1.value)
     end)
   end
 
@@ -158,5 +155,15 @@ defmodule Towers.Board do
     board.cells
     |> Enum.zip()
     |> Enum.map(&Tuple.to_list(&1))
+  end
+end
+
+defmodule PuzzleSolver do
+  import Towers.Board
+
+  def solve(clues) do
+    clues
+    |> new()
+    |> loop()
   end
 end

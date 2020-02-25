@@ -5,7 +5,7 @@ defmodule Towers.Row do
 
   alias Towers.{Cell}
 
-  defstruct [:n_front, :n_back, cells: [], coords: []]
+  defstruct [:n_front, :n_back, cells: []]
 
   def new(n_front, n_back, cells) do
     %Row{
@@ -26,23 +26,22 @@ defmodule Towers.Row do
       |> Enum.filter(&(&1.value != nil))
       |> Enum.map(& &1.value)
 
+    # Weird behaviour debug
+    # %Cell{x: x1, y: y1} = Enum.at(cells, 0)
+    # %Cell{x: x2, y: y2} = Enum.at(cells, 3)
+    # if (x1 == 0 and y1 == 3 and x2 == 3 and y2 == 3) do
+    #   IO.puts("weird")
+    #   IO.inspect(row)
+    # end
+    
     if has_duplicates?(discovered_values) do
+      IEx.pry()
       throw("Error in algorithm - row has duplicates")
     end
 
     all_values =
       cells
-      |> Enum.reduce([], fn %Cell{values: values}, acc ->
-        acc ++ MapSet.to_list(values)
-      end)
-
-    uniques_set =
-      all_values
-      |> Enum.group_by(fn v ->
-        Enum.count(all_values, &(&1 == v))
-      end)
-      |> Map.get(1, [])
-      |> Enum.into(MapSet.new())
+      |> Enum.flat_map(&MapSet.to_list(&1.values))
 
     singles_set =
       cells
@@ -51,20 +50,31 @@ defmodule Towers.Row do
 
     discovered_set = Enum.into(discovered_values, MapSet.new())
 
+    uniques_set =
+      all_values
+      |> Enum.group_by(fn v ->
+        Enum.count(all_values, &(&1 == v))
+      end)
+      |> Map.get(1, [])
+      |> Enum.into(MapSet.new())
+      |> MapSet.difference(singles_set)
+      |> MapSet.difference(discovered_set)
+
     result = %Row{
-      row |
-      cells: cells
-      |> Enum.map(&(
-        &1
-        |> Cell.apply_singles(singles_set)
-        |> Cell.apply_uniques(uniques_set)
-        |> Cell.apply_discovered(discovered_set)
-        |> Cell.apply_values()
-      ))
+      row
+      | cells:
+          cells
+          |> Enum.map(
+            &(&1
+              |> Cell.apply_singles(singles_set)
+              |> Cell.apply_uniques(uniques_set)
+              |> Cell.apply_discovered(discovered_set)
+              |> Cell.apply_values())
+          )
     }
 
-    if result != row, 
-      do: digest(result), 
+    if result != row,
+      do: digest(result),
       else: result
   end
 
@@ -132,7 +142,7 @@ defmodule Towers.Row do
 
   def side_valid?(heights, n, n_curr \\ 0, max_height_curr \\ 0)
 
-  def side_valid?(_, nil, _, _), do: true
+  def side_valid?(_, 0, _, _), do: true
 
   def side_valid?([], n, n_curr, _max_height_curr),
     do: n == n_curr

@@ -76,7 +76,7 @@ defmodule Towers.RowTest do
   test "given only n_front, digest_clues/2 sets values correctly" do
     row = %Row{
       n_front: 1,
-      n_back: nil,
+      n_back: 0,
       cells:
         for {x, y} <- [{0, 0}, {1, 0}, {2, 0}, {3, 0}] do
           Cell.new(x, y)
@@ -91,6 +91,31 @@ defmodule Towers.RowTest do
              n_back: _,
              cells: [
                %Cell{values: ^cell_1_values},
+               %Cell{values: ^cell_values},
+               %Cell{values: ^cell_values},
+               %Cell{values: ^cell_values}
+             ]
+           } = Row.digest_clues(row)
+  end
+
+  @tag no_clues: true
+  test "given no clues, all permutations are returned" do
+    row = %Row{
+      n_front: 0,
+      n_back: 0,
+      cells:
+        for {x, y} <- [{0, 0}, {1, 0}, {2, 0}, {3, 0}] do
+          Cell.new(x, y)
+        end
+    }
+
+    cell_values = MapSet.new([1,2,3,4])
+
+    assert %Row{
+             n_front: _,
+             n_back: _,
+             cells: [
+               %Cell{values: ^cell_values},
                %Cell{values: ^cell_values},
                %Cell{values: ^cell_values},
                %Cell{values: ^cell_values}
@@ -167,6 +192,28 @@ defmodule Towers.RowTest do
                  %Cell{values: set([1, 2]), x: 1, y: 1},
                  %Cell{values: set([1, 2]), x: 2, y: 1},
                  %Cell{values: set([1, 3]), x: 3, y: 1}
+               ]
+             })
+  end
+
+  @tag row_digest: true
+  test "digest/1 - 3" do
+    set_1_2_3_4 = set([1, 2, 3, 4])
+
+    assert %Row{
+             cells: [
+               %Cell{value: nil, values: ^set_1_2_3_4},
+               %Cell{value: nil, values: ^set_1_2_3_4},
+               %Cell{value: nil, values: ^set_1_2_3_4},
+               %Cell{value: nil, values: ^set_1_2_3_4}
+             ]
+           } =
+             Row.digest(%Row{
+               cells: [
+                 %Cell{values: set_1_2_3_4, x: 0, y: 1},
+                 %Cell{values: set_1_2_3_4, x: 1, y: 1},
+                 %Cell{values: set_1_2_3_4, x: 2, y: 1},
+                 %Cell{values: set_1_2_3_4, x: 3, y: 1}
                ]
              })
   end

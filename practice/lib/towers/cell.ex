@@ -64,7 +64,4 @@ defmodule Towers.Cell do
     do: MapSet.size(values) == 0
 
   def pristine?(%Cell{}), do: false
-
-  def discovered?(%Cell{value: value}),
-    do: not is_nil(value)
 end
