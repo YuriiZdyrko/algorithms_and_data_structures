@@ -69,7 +69,7 @@ defmodule Towers.Row do
     Set initial values[] set for each cell in a row,
     using clues (n_front and n_back).
     After digest clues are no longer needed,
-    except try_permuts phase,
+    except guess_loop phase,
     because they are transformed here into cells' values[].
 
     For example for:
