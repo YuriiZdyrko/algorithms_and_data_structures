@@ -51,7 +51,6 @@ defmodule Towers.Row do
           cells
           |> Enum.map(
             &(&1
-              |> Cell.apply_singles(singles_set)
               |> Cell.apply_discovered(discovered_set, size)
               |> Cell.apply_uniques(uniques_set)
               |> Cell.apply_values())

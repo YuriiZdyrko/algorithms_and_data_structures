@@ -65,21 +65,4 @@ defmodule Towers.CellTest do
                MapSet.new([2, 10])
              )
   end
-
-  @tag cell: true
-  test "apply_singles/2" do
-    new_values = MapSet.new([3, 4])
-
-    assert %Cell{
-             value: nil,
-             values: ^new_values
-           } =
-             Cell.apply_singles(
-               %Cell{
-                 values: MapSet.new([1, 2, 3, 4]),
-                 value: nil
-               },
-               MapSet.new([1, 2])
-             )
-  end
 end

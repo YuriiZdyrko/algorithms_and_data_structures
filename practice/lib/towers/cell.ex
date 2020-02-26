@@ -19,43 +19,25 @@ defmodule Towers.Cell do
     end
   end
 
-  def apply_values(%Cell{value: val} = cell) do
-    cell
-  end
-
-  def apply_singles(%Cell{values: values} = cell, set) do
-    if MapSet.size(values) > 1 do
-      values = MapSet.difference(values, set)
-
-      %Cell{
-        cell
-        | values: values
-      }
-    else
-      cell
-    end
-  end
+  def apply_values(cell), do: cell
 
   def apply_discovered(%Cell{values: values} = cell, set, size) do
-    if MapSet.size(set) == size - 1 && is_nil(cell.value) do
-      new_value =
+    if is_nil(cell.value) && MapSet.size(set) == size - 1 do
+      value =
         1..size
         |> Enum.into(MapSet.new())
         |> MapSet.difference(set)
-        |> MapSet.to_list()
-        |> List.first()
+        |> Enum.at(0)
 
       %Cell{
         cell
         | values: MapSet.new(),
-          value: new_value
+          value: value
       }
     else
-      values = MapSet.difference(values, set)
-
       %Cell{
         cell
-        | values: values
+        | values: MapSet.difference(values, set)
       }
     end
   end

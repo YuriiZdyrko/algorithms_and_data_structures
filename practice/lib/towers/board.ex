@@ -1,10 +1,9 @@
 defmodule Towers.Board do
   @moduledoc """
-  Code is complicated and there're mutually recursive methods (digest_loop/2 and guess_loop/2)
-  Works for 6X6 board, but it's slow.
-  It's not very smart solution, but it's an implementation of my own idea.
-  Algorithm solves "easy" cells efficiently, 
-  and then, if necessary, does "brute force" row-by-row guesswork.
+  Sudoku solver
+
+  There's mind-bending mutual recursion between digest_loop/2 and guess_loop/2
+  Algorithm discovers easy towers and starts row-by-row guesswork if ambiquity is encountered.
 
   To see it in action, run: 
   iex> mix test --only solver:true
@@ -37,7 +36,6 @@ defmodule Towers.Board do
 
   def digest_loop(board, :continue) do
     board_new = digest(board)
-
     # IO.puts("loop...")
 
     if board != board_new do
@@ -71,7 +69,7 @@ defmodule Towers.Board do
     end)
   end
 
-  def compute_rows(board = %Board{cells: cells, clues: clues, size: size}) do
+  def compute_rows(board = %Board{clues: clues, size: size}) do
     [
       front_vert,
       back_hor,
@@ -84,7 +82,7 @@ defmodule Towers.Board do
     |> init_merge_rows(front_vert, Enum.reverse(back_vert), :rows_ver)
   end
 
-  def init_merge_rows(board = %Board{cells: cells}, front_clues, back_clues, rows_key)
+  def init_merge_rows(board, front_clues, back_clues, rows_key)
       when rows_key in [:rows_hor, :rows_ver] do
     cells =
       board
@@ -113,7 +111,7 @@ defmodule Towers.Board do
   end
 
   def merge_cell(
-        board = %Board{cells: cells},
+        board,
         %Cell{x: x, y: y, value: value, values: values}
       ) do
     update_cell_at(
@@ -156,13 +154,13 @@ defmodule Towers.Board do
     |> Enum.at(x)
   end
 
-  def digest(%Board{cells: cells} = board) do
+  def digest(board) do
     board
     |> digest_merge_rows(:rows_hor)
     |> digest_merge_rows(:rows_ver)
   end
 
-  def digest_merge_rows(board = %Board{cells: cells}, rows_key)
+  def digest_merge_rows(board, rows_key)
       when rows_key in [:rows_hor, :rows_ver] do
     rows =
       board
@@ -176,59 +174,57 @@ defmodule Towers.Board do
     |> merge_rows(rows, rows_key)
   end
 
-  def try_to_resolve_ambiquity(board) do
+  @doc """
+  Always pick row with smallest amount of values to guess.
+  This makes algorithm 3 times faster.
+  """
+  def try_to_resolve_ambiquity(board = %Board{cells: cells}) do
     empty_cells =
-      board.cells
+      cells ++ cells_for_rows(board, :rows_ver)
       |> Enum.filter(fn cells ->
         Enum.any?(cells, &is_nil(&1.value))
       end)
-      |> Enum.sort_by(fn cells -> 
-        unknown_values_count = cells 
-        |> Enum.map(&(MapSet.size(&1.values)))
-        |> Enum.sum()
-
-        unknown_values_count
-      end)
+      |> Enum.sort_by(fn cells ->
+        cells
+        |> Enum.filter(&(&1.value))
+        |> Enum.count()
+      end, :asc)
       |> List.first()
       |> Enum.filter(&is_nil(&1.value))
 
-    nil_heights =
-      empty_cells
-      |> Enum.map(&MapSet.to_list(&1.values))
-      |> Permutations.do_recursive()
-      |> Enum.reject(&(Enum.uniq(&1) != &1))
-
-    empty_cells_permuts =
-      nil_heights
-      |> Enum.map(fn permut ->
-        permut
-        |> Enum.zip(empty_cells)
-        |> Enum.map(fn {permut_value, cell} ->
-          %Cell{
-            cell
-            | value: permut_value,
-              values: MapSet.new()
-          }
-        end)
+    tentative_cells = empty_cells
+    |> Enum.map(&MapSet.to_list(&1.values))
+    |> Permutations.do_recursive()
+    |> Enum.reject(&(Enum.uniq(&1) != &1))
+    |> Enum.map(fn permutations ->
+      permutations
+      |> Enum.zip(empty_cells)
+      |> Enum.map(fn {tentative_value, cell} ->
+        %Cell{
+          cell
+          | value: tentative_value,
+            values: MapSet.new()
+        }
       end)
+    end)
 
-    guess_loop(board, empty_cells_permuts)
+    guess_loop(board, tentative_cells)
   end
 
   def guess_loop(board, []), do: {:guess_dead_end, board}
 
-  def guess_loop(board, [cells | t]) do
+  def guess_loop(board, [tentative_cells | t]) do
     # IO.puts("guess_loop...")
 
     tentative_board =
-      cells
+      tentative_cells
       |> Enum.reduce(board, fn cell = %Cell{x: x, y: y}, board ->
         board
         |> update_cell_at(x, y, fn _ -> cell end)
       end)
 
     with {:done, board} <- digest_loop(tentative_board),
-          {:ok, board} <- validate_against_clues(board) do
+         {:ok, board} <- validate_against_clues(board) do
       digest_loop_success(board, :done_by_guess)
     else
       {:guess_clues_error, _board} ->
@@ -240,28 +236,29 @@ defmodule Towers.Board do
   end
 
   defp cells_for_rows(board, :rows_hor), do: board.cells
+
   defp cells_for_rows(board, :rows_ver) do
     board.cells
     |> Enum.zip()
     |> Enum.map(&Tuple.to_list(&1))
   end
 
-  def validate_against_clues(board) do
-    hor_cells = cells_for_rows(board, :rows_hor)
+  def validate_against_clues(board = %Board{cells: hor_cells}) do
     ver_cells = cells_for_rows(board, :rows_ver)
-    
+
     0..(board.size - 1)
     |> Enum.all?(fn i ->
+      Row.cells_allowed_by_clues?(
+        Enum.at(board.rows_hor, i),
+        Enum.at(hor_cells, i)
+      ) &&
         Row.cells_allowed_by_clues?(
-          Enum.at(board.rows_hor, i),
-          Enum.at(hor_cells, i)
-        ) && Row.cells_allowed_by_clues?(
           Enum.at(board.rows_ver, i),
           Enum.at(ver_cells, i)
         )
     end)
     |> if(
-      do: {:ok, board}, 
+      do: {:ok, board},
       else: {:guess_clues_error, board}
     )
   end
