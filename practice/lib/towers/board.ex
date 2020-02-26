@@ -1,6 +1,7 @@
 defmodule Towers.Board do
   defstruct [:size, :rows_ver, :rows_hor, cells: [], clues: []]
-  alias Towers.{Board, Row, Cell}
+  alias Towers.{Board, Row, Cell, Permutations}
+  import IEx
 
   @board_size 4
   @clues [2, 2, 1, 3, 2, 2, 3, 1, 1, 2, 2, 3, 3, 2, 1, 3]
@@ -179,10 +180,9 @@ defmodule Towers.Board do
 
     nil_heights =
       empty_cells
-      |> List.first()
-      |> Map.get(:values)
-      |> MapSet.to_list()
-      |> Row.permutations()
+      |> Enum.map(&MapSet.to_list(&1.values))
+      |> Permutations.do_recursive()
+      |> Enum.reject(&(Enum.uniq(&1) != &1))
 
     empty_cells_permuts =
       nil_heights
@@ -232,19 +232,24 @@ defmodule Towers.Board do
   end
 
   def validate_against_clues(board) do
-    all_valid? = 0..(board.size - 1)
-    |> Enum.all?(fn i ->
-      hor_valid? = Row.cells_allowed_by_clues?(
-        Enum.at(board.rows_hor, i),
-        Enum.at(cells_for_rows(board, :rows_hor), i)
-      )
-      ver_valid? = Row.cells_allowed_by_clues?(
-        Enum.at(board.rows_ver, i),
-        Enum.at(cells_for_rows(board, :rows_ver), i)
-      )
-      hor_valid? and ver_valid?
-    end)
-    
+    all_valid? =
+      0..(board.size - 1)
+      |> Enum.all?(fn i ->
+        hor_valid? =
+          Row.cells_allowed_by_clues?(
+            Enum.at(board.rows_hor, i),
+            Enum.at(cells_for_rows(board, :rows_hor), i)
+          )
+
+        ver_valid? =
+          Row.cells_allowed_by_clues?(
+            Enum.at(board.rows_ver, i),
+            Enum.at(cells_for_rows(board, :rows_ver), i)
+          )
+
+        hor_valid? and ver_valid?
+      end)
+
     case all_valid? do
       true -> {:ok, board}
       _ -> {:clues_error, board}
