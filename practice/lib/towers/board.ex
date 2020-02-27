@@ -36,6 +36,7 @@ defmodule Towers.Board do
 
   def digest_loop(board, :continue) do
     board_new = digest(board)
+
     # IO.puts("loop...")
 
     if board != board_new do
@@ -180,33 +181,37 @@ defmodule Towers.Board do
   """
   def try_to_resolve_ambiquity(board = %Board{cells: cells}) do
     empty_cells =
-      cells ++ cells_for_rows(board, :rows_ver)
+      (cells ++ cells_for_rows(board, :rows_ver))
       |> Enum.filter(fn cells ->
         Enum.any?(cells, &is_nil(&1.value))
       end)
-      |> Enum.sort_by(fn cells ->
-        cells
-        |> Enum.filter(&(&1.value))
-        |> Enum.count()
-      end, :asc)
+      |> Enum.sort_by(
+        fn cells ->
+          cells
+          |> Enum.filter(& &1.value)
+          |> Enum.count()
+        end,
+        :asc
+      )
       |> List.first()
       |> Enum.filter(&is_nil(&1.value))
 
-    tentative_cells = empty_cells
-    |> Enum.map(&MapSet.to_list(&1.values))
-    |> Permutations.do_recursive()
-    |> Enum.reject(&(Enum.uniq(&1) != &1))
-    |> Enum.map(fn permutations ->
-      permutations
-      |> Enum.zip(empty_cells)
-      |> Enum.map(fn {tentative_value, cell} ->
-        %Cell{
-          cell
-          | value: tentative_value,
-            values: MapSet.new()
-        }
+    tentative_cells =
+      empty_cells
+      |> Enum.map(&MapSet.to_list(&1.values))
+      |> Permutations.do_recursive()
+      |> Enum.reject(&(Enum.uniq(&1) != &1))
+      |> Enum.map(fn permutations ->
+        permutations
+        |> Enum.zip(empty_cells)
+        |> Enum.map(fn {tentative_value, cell} ->
+          %Cell{
+            cell
+            | value: tentative_value,
+              values: MapSet.new()
+          }
+        end)
       end)
-    end)
 
     guess_loop(board, tentative_cells)
   end
